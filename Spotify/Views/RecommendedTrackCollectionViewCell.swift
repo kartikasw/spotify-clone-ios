@@ -1,0 +1,12 @@
+//
+//  RecommendedTrackCollectionViewCell.swift
+//  Spotify
+//
+//  Created by Kartika Sari on 10/12/23.
+//
+
+import UIKit
+
+class RecommendedTrackCollectionViewCell: UICollectionViewCell {
+    static let identifier = "RecommendedTrackCollectionViewCell"
+}
