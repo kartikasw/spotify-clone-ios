@@ -11,6 +11,17 @@ enum BrowseSectionType {
     case newReleases(viewModels: [NewReleasesCellViewModel])
     case featuredPlaylists(viewModels: [FeaturedPlaylistCellViewModel])
     case recommendedTracks(viewModels: [RecommendedTrackCellViewModel])
+    
+    var title: String {
+        switch self {
+        case .newReleases:
+            return "New Releases"
+        case .featuredPlaylists:
+            return "Featured Playlists"
+        case .recommendedTracks:
+            return "Recommeded Tracks"
+        }
+    }
 }
 
 class HomeViewController: UIViewController {
@@ -34,7 +45,7 @@ class HomeViewController: UIViewController {
     }()
     
     private var sections = [BrowseSectionType]()
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Browse"
@@ -59,6 +70,7 @@ class HomeViewController: UIViewController {
         collectionView.register(NewReleaseCollectionViewCell.self, forCellWithReuseIdentifier: NewReleaseCollectionViewCell.identifier)
         collectionView.register(FeaturedPlaylistCollectionViewCell.self, forCellWithReuseIdentifier: FeaturedPlaylistCollectionViewCell.identifier)
         collectionView.register(RecommendedTrackCollectionViewCell.self, forCellWithReuseIdentifier: RecommendedTrackCollectionViewCell.identifier)
+        collectionView.register(TitleHeaderCollectionReusableView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: TitleHeaderCollectionReusableView.identifier)
         
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -86,7 +98,33 @@ class HomeViewController: UIViewController {
         }
     }
     
-    private static func createSectionLayout(section: Int) -> NSCollectionLayoutSection? {
+    func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
+        guard let header = collectionView.dequeueReusableSupplementaryView(
+            ofKind: kind,
+            withReuseIdentifier: TitleHeaderCollectionReusableView.identifier,
+            for: indexPath
+        ) as? TitleHeaderCollectionReusableView, kind == UICollectionView.elementKindSectionHeader else {
+            return UICollectionReusableView()
+        }
+        
+        let section = indexPath.section
+        let title = sections[section].title
+        header.configure(with: title)
+        return header
+    }
+    
+    private static func createSectionLayout(section: Int) -> NSCollectionLayoutSection {
+        let supplementaryViews = [
+            NSCollectionLayoutBoundarySupplementaryItem(
+                layoutSize: NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1),
+                    heightDimension: .absolute(50)
+                ),
+                elementKind: UICollectionView.elementKindSectionHeader,
+                alignment: .top
+            )
+        ]
+        
         switch section {
         case 0:
             let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0)))
@@ -99,7 +137,7 @@ class HomeViewController: UIViewController {
             
             let section = NSCollectionLayoutSection(group: horizontalGroup)
             section.orthogonalScrollingBehavior = .groupPaging
-            
+            section.boundarySupplementaryItems = supplementaryViews
             return section
         case 1:
             let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: .absolute(200), heightDimension: .absolute(200)))
@@ -112,7 +150,7 @@ class HomeViewController: UIViewController {
             
             let section = NSCollectionLayoutSection(group: horizontalGroup)
             section.orthogonalScrollingBehavior = .continuous
-            
+            section.boundarySupplementaryItems = supplementaryViews
             return section
         case 2:
             let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0)))
@@ -122,7 +160,7 @@ class HomeViewController: UIViewController {
             let group = NSCollectionLayoutGroup.vertical(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .absolute(80)), subitem: item, count: 1)
             
             let section = NSCollectionLayoutSection(group: group)
-            
+            section.boundarySupplementaryItems = supplementaryViews
             return section
         default:
             let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0)))
@@ -132,7 +170,7 @@ class HomeViewController: UIViewController {
             let group = NSCollectionLayoutGroup.vertical(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .absolute(390)), subitem: item, count: 1)
             
             let section = NSCollectionLayoutSection(group: group)
-            
+            section.boundarySupplementaryItems = supplementaryViews
             return section
         }
     }
@@ -152,7 +190,7 @@ class HomeViewController: UIViewController {
                 group.leave()
             }
             switch result {
-            case .success(let model): 
+            case .success(let model):
                 newReleases = model
             case .failure(let error):
                 print(error.localizedDescription)
@@ -174,7 +212,7 @@ class HomeViewController: UIViewController {
         
         APICaller.shared.getRecommendedGenres { result in
             switch result {
-            case.success(let model): 
+            case.success(let model):
                 let genres = model.genres
                 var seeds = Set<String>()
                 while seeds.count < 5 {
@@ -189,14 +227,14 @@ class HomeViewController: UIViewController {
                     }
                     
                     switch recommendedResult {
-                    case .success(let model): 
+                    case .success(let model):
                         recommendations = model
                     case .failure(let error):
                         print(error.localizedDescription)
                     }
                 }
                 
-            case .failure(let error): 
+            case .failure(let error):
                 print(error.localizedDescription)
             }
         }
@@ -305,4 +343,5 @@ extension HomeViewController: UICollectionViewDelegate, UICollectionViewDataSour
         }
     }
 }
+
 
