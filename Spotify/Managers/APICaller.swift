@@ -32,7 +32,7 @@ final class APICaller {
                     let result = try JSONDecoder().decode(AlbumDetailsResponse.self, from: data)
                     completion(.success(result))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
@@ -52,7 +52,7 @@ final class APICaller {
                     let result = try JSONDecoder().decode(PlaylistDetailsResponse.self, from: data)
                     completion(.success(result))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
@@ -72,7 +72,7 @@ final class APICaller {
                     let result = try JSONDecoder().decode(UserProfile.self, from: data)
                     completion(.success(result))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
@@ -92,7 +92,7 @@ final class APICaller {
                     let result = try JSONDecoder().decode(NewReleasesReponse.self, from: data)
                     completion(.success(result))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
@@ -114,7 +114,7 @@ final class APICaller {
                     let result = try JSONDecoder().decode(RecommendationsResponse.self, from: data)
                     completion(.success(result))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
@@ -156,7 +156,7 @@ final class APICaller {
                     let result = try JSONDecoder().decode(FeaturedPlaylistsResponse.self, from: data)
                     completion(.success(result))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
@@ -178,14 +178,14 @@ final class APICaller {
                     let result = try JSONDecoder().decode(AllCategoriesResponse.self, from: data)
                     completion(.success(result.categories.items))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
             task.resume()
         }
     }
-   
+    
     public func getCategoryPlaylists(category: Category, completion: @escaping (Result<[Playlist], Error>) -> Void) {
         createRequest(with: URL(string: Constants.baseAPIURL + "/browse/categories/\(category.id)/playlists"), type: .GET) { request in
             let task = URLSession.shared.dataTask(with: request) { data, _, error in
@@ -198,13 +198,54 @@ final class APICaller {
                     let result = try JSONDecoder().decode(CategoryPlaylistsResponse.self, from: data)
                     completion(.success(result.playlists.items))
                 } catch {
-                    print(error.localizedDescription)
+                    print(error)
                     completion(.failure(error))
                 }
             }
             task.resume()
         }
     }
+    
+    // MARK: - Search
+    public func search(with query: String, completion: @escaping (Result<[SearchResult], Error>) -> Void) {
+        createRequest(with: URL(string: Constants.baseAPIURL+"/search?type=album,artist,track,playlist&q=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"), type: .GET) {
+            request in
+            let task = URLSession.shared.dataTask(with: request) { data, _, error in
+                guard let data = data, error == nil else {
+                    completion(.failure(APIError.failedToGetData))
+                    return
+                }
+                
+                do {
+                    let result = try JSONDecoder().decode(SearchResultResponse.self, from: data)
+                    var searchResults: [SearchResult] = []
+                    
+                    if let items = result.tracks?.items, !items.isEmpty {
+                        searchResults.append(contentsOf: items.compactMap({ SearchResult.track(model: $0)}))
+                    }
+                    
+                    if let items = result.albums?.items, !items.isEmpty {
+                        searchResults.append(contentsOf: items.compactMap({ SearchResult.album(model: $0)}))
+                    }
+                    
+                    if let items = result.artists?.items, !items.isEmpty {
+                        searchResults.append(contentsOf: items.compactMap({ SearchResult.artist(model: $0)}))
+                    }
+                    
+                    if let items = result.playlists?.items, !items.isEmpty {
+                        searchResults.append(contentsOf: items.compactMap({ SearchResult.playlist(model: $0)}))
+                    }
+                    
+                    completion(.success(searchResults))
+                } catch {
+                    print(error)
+                    completion(.failure(error))
+                }
+            }
+            task.resume()
+        }
+    }
+    
     // MARK: - Private
     
     enum HTTPMethod: String {
